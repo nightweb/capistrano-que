@@ -2,73 +2,73 @@
 
 git_plugin = self
 
-namespace :sidekiq do
+namespace :que do
   standard_actions = {
-    start: 'Start Sidekiq',
-    stop: 'Stop Sidekiq (graceful shutdown within timeout, put unfinished tasks back to Redis)',
-    status: 'Get Sidekiq Status',
-    restart: 'Restart Sidekiq'
+    start: 'Start Que',
+    stop: 'Stop Que (graceful shutdown within timeout, put unfinished tasks back to Redis)',
+    status: 'Get Que Status',
+    restart: 'Restart Que'
   }
   standard_actions.each do |command, description|
     desc description
     task command do
-      on roles fetch(:sidekiq_roles) do |role|
+      on roles fetch(:que_roles) do |role|
         git_plugin.switch_user(role) do
-          git_plugin.config_files(role).each do |config_file|
-            git_plugin.execute_systemd(command, git_plugin.sidekiq_service_file_name(config_file))
+          git_plugin.queues(role).each do |queue|
+            git_plugin.execute_systemd(command, git_plugin.que_service_file_name(queue))
           end
         end
       end
     end
   end
 
-  desc 'Quiet Sidekiq (stop fetching new tasks from Redis)'
+  desc 'Quiet Que (stop fetching new tasks from Redis)'
   task :quiet do
-    on roles fetch(:sidekiq_roles) do |role|
+    on roles fetch(:que_roles) do |role|
       git_plugin.switch_user(role) do
-        git_plugin.quiet_sidekiq(role)
+        git_plugin.quiet_que(role)
       end
     end
   end
 
-  desc 'Install Sidekiq systemd service'
+  desc 'Install Que systemd service'
   task :install do
-    on roles fetch(:sidekiq_roles) do |role|
+    on roles fetch(:que_roles) do |role|
       git_plugin.switch_user(role) do
         git_plugin.create_systemd_template(role)
       end
     end
-    invoke 'sidekiq:enable'
+    invoke 'que:enable'
   end
 
-  desc 'Uninstall Sidekiq systemd service'
+  desc 'Uninstall Que systemd service'
   task :uninstall do
-    invoke 'sidekiq:disable'
-    on roles fetch(:sidekiq_roles) do |role|
+    invoke 'que:disable'
+    on roles fetch(:que_roles) do |role|
       git_plugin.switch_user(role) do
         git_plugin.rm_systemd_service(role)
       end
     end
   end
 
-  desc 'Enable Sidekiq systemd service'
+  desc 'Enable Que systemd service'
   task :enable do
-    on roles(fetch(:sidekiq_roles)) do |role|
-      git_plugin.config_files(role).each do |config_file|
-        git_plugin.execute_systemd("enable", git_plugin.sidekiq_service_file_name(config_file))
+    on roles(fetch(:que_roles)) do |role|
+      git_plugin.queues(role).each do |queue|
+        git_plugin.execute_systemd("enable", git_plugin.que_service_file_name(queue))
       end
 
-      if fetch(:systemctl_user) && fetch(:sidekiq_lingering_user)
+      if fetch(:systemctl_user) && fetch(:que_lingering_user)
         execute :loginctl, "enable-linger", fetch(:puma_lingering_user)
       end
     end
   end
 
-  desc 'Disable Sidekiq systemd service'
+  desc 'Disable Que systemd service'
   task :disable do
-    on roles(fetch(:sidekiq_roles)) do |role|
-      git_plugin.config_files(role).each do |config_file|
-        git_plugin.execute_systemd("disable", git_plugin.sidekiq_service_file_name(config_file))
+    on roles(fetch(:que_roles)) do |role|
+      git_plugin.queues(role).each do |queue|
+        git_plugin.execute_systemd("disable", git_plugin.que_service_file_name(queue))
       end
     end
   end
@@ -86,10 +86,10 @@ namespace :sidekiq do
     systemd_path = fetch(:service_unit_path, fetch_systemd_unit_path)
     backend.execute :mkdir, '-p', systemd_path if fetch(:systemctl_user)
 
-    config_files(role).each do |config_file|
-        ctemplate = compiled_template(config_file)
-        temp_file_name = File.join('/tmp', "sidekiq.#{config_file}.service")
-        systemd_file_name = File.join(systemd_path, sidekiq_service_file_name(config_file))
+    queues(role).each do |queue|
+        ctemplate = compiled_template(queue)
+        temp_file_name = File.join('/tmp', "que.#{queue}.service")
+        systemd_file_name = File.join(systemd_path, que_service_file_name(queue))
         backend.upload!(StringIO.new(ctemplate), temp_file_name)
         if fetch(:systemctl_user)
           warn "Moving #{temp_file_name} to #{systemd_file_name}"
@@ -104,8 +104,8 @@ namespace :sidekiq do
   def rm_systemd_service(role)
     systemd_path = fetch(:service_unit_path, fetch_systemd_unit_path)
 
-    config_files(role).each do |config_file|
-      systemd_file_name = File.join(systemd_path, sidekiq_service_file_name(config_file))
+    queues(role).each do |queue|
+      systemd_file_name = File.join(systemd_path, que_service_file_name(queue))
       if fetch(:systemctl_user)
         warn "Deleting #{systemd_file_name}"
         backend.execute :rm, "-f", systemd_file_name
@@ -116,31 +116,31 @@ namespace :sidekiq do
     end
   end
 
-  def quiet_sidekiq(role)
-    config_files(role).each do |config_file|
-      sidekiq_service = sidekiq_service_unit_name(config_file)
-      warn "Quieting #{sidekiq_service}"
-      execute_systemd("kill -s TSTP", sidekiq_service)
+  def quiet_que(role)
+    queues(role).each do |queue|
+      que_service = que_service_unit_name(queue)
+      warn "Quieting #{que_service}"
+      execute_systemd("kill -s TSTP", que_service)
     end
   end
 
-  def sidekiq_service_unit_name(config_file)
-    if config_file != "sidekiq.yml"
-      fetch(:sidekiq_service_unit_name) + "." + config_file.split(".")[0..-2].join(".")
+  def que_service_unit_name(queue)
+    if queue != "que.yml"
+      fetch(:que_service_unit_name) + "." + queue.split(".")[0..-2].join(".")
     else
-      fetch(:sidekiq_service_unit_name)
+      fetch(:que_service_unit_name)
     end
   end
 
-  def sidekiq_service_file_name(config_file)
+  def que_service_file_name(queue)
     ## Remove the extension
-    config_file = config_file.split('.')[0..-1].join('.')
+    queue = queue.split('.')[0..-1].join('.')
 
-    "#{sidekiq_service_unit_name(config_file)}.service"
+    "#{que_service_unit_name(queue)}.service"
   end
 
-  def config_files(role)
-    role.properties.fetch(:sidekiq_config_files) ||
-      fetch(:sidekiq_config_files)
+  def queues(role)
+    role.properties.fetch(:que_queues) ||
+      fetch(:que_queues)
   end
 end

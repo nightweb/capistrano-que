@@ -1,0 +1,8 @@
+# Monit configuration for Que
+# Service name: <%= que_service_name %>
+#
+check process <%= que_service_name %>
+  matching 'que .* <%= fetch(:application) %>'
+  start program = "/bin/su - <%= que_user(role) %> -c 'cd <%= current_path %> && <%= SSHKit.config.command_map[:bundle] %> exec que -e <%= fetch(:que_env) %> <%= que_concurrency %> <%= que_require %> <%= que_queues %> <%= que_logfile ? ">> #{que_logfile} 2>&1" : nil %> &'" with timeout <%= fetch(:que_timeout).to_i + 10 %> seconds
+  stop program = "/bin/su - <%= que_user(role) %> -c 'ps ax | grep "<%= "que .* #{fetch(:application)}" %>" | grep -v grep | awk "{print \$1}" | xargs --no-run-if-empty kill'" with timeout <%= fetch(:que_timeout).to_i + 10  %> seconds
+  group <%= fetch(:que_monit_group) || fetch(:application) %>-que
