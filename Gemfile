@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in capistrano-sidekiq.gemspec
+# Specify your gem's dependencies in capistrano-que.gemspec
 gemspec
 
 gem "bump", "~> 0.10.0"

@@ -1,0 +1,45 @@
+# Source: https://github.com/mperham/que/blob/master/examples/systemd/que.service
+#
+# This file tells systemd how to run Que as a 24/7 long-running daemon.
+
+# Then run:
+#   - systemctl enable <%= que_service_unit_name(@queue) %>
+#   - systemctl {start,stop,restart} <%= que_service_unit_name(@queue) %>
+#
+# Use `journalctl -u <%= que_service_unit_name(@queue) %> -rn 100` to view the last 100 lines of log output.
+#
+[Unit]
+Description=Que for <%= "#{fetch(:application)} (#{fetch(:stage)})" %>
+# start us only once the network and logging subsystems are available,
+# consider adding redis-server.service if Redis is local and systemd-managed.
+After=syslog.target network.target
+
+[Service]
+Type=notify
+# If your Que process locks up, systemd's watchdog will restart it within seconds.
+WatchdogSec=10
+<%="User=#{que_user}" if fetch(:que_systemctl_user) == :system %>
+WorkingDirectory=<%= current_path %>
+ExecStart=<%= expanded_bundle_path %> exec que -e <%= fetch(:que_env) %> <%= que_config %>
+
+# Use `systemctl kill -s TSTP <% que_service_unit_name(@queue) %>` to quiet the Que process
+UMask=0002
+
+<%- Array(fetch(:que_service_unit_env_files)).each do |file| %>
+<%="EnvironmentFile=#{file}" %>
+<% end -%>
+<% Array(fetch(:que_service_unit_env_vars)).each do |environment_variable| %>
+<%="Environment=\"#{environment_variable}\"" %>
+<% end -%>
+
+# if we crash, restart
+RestartSec=1
+Restart=on-failure
+
+<%="StandardOutput=append:#{fetch(:que_log)}" if fetch(:que_log) -%>
+
+<%="StandardError=append:#{fetch(:que_error_log)}" if fetch(:que_error_log) -%>
+
+SyslogIdentifier=<%= que_service_unit_name(@queue) %>
+[Install]
+WantedBy=<%=(fetch(:que_systemctl_user) == :system) ? "multi-user.target" : "default.target"%>

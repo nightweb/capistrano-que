@@ -1,12 +1,12 @@
-[![Gem Version](https://badge.fury.io/rb/capistrano-sidekiq.svg)](http://badge.fury.io/rb/capistrano-sidekiq)
+[![Gem Version](https://badge.fury.io/rb/capistrano-que.svg)](http://badge.fury.io/rb/capistrano-que)
 
-# Capistrano::Sidekiq
+# Capistrano::Que
 
-Sidekiq integration for Capistrano
+Que integration for Capistrano
 
 ## Installation
 
-    gem 'capistrano-sidekiq', group: :development
+    gem 'capistrano-que', group: :development
 
 And then execute:
 
@@ -16,22 +16,22 @@ And then execute:
 ## Usage
 ```ruby
     # Capfile
-    require 'capistrano/sidekiq'
-    install_plugin Capistrano::Sidekiq  # Default sidekiq tasks
+    require 'capistrano/que'
+    install_plugin Capistrano::Que  # Default que tasks
     # Then select your service manager
-    install_plugin Capistrano::Sidekiq::Systemd
+    install_plugin Capistrano::Que::Systemd
 ```
 
 Configurable options - Please ensure you check your version's branch for the available settings - shown here with defaults:
 
 ```ruby
-:sidekiq_roles => :worker
-:sidekiq_default_hooks => true
-:sidekiq_env => fetch(:rack_env, fetch(:rails_env, fetch(:stage)))
+:que_roles => :worker
+:que_default_hooks => true
+:que_env => fetch(:rack_env, fetch(:rails_env, fetch(:stage)))
 # single config
-:sidekiq_config_files, ['sidekiq.yml']
+:que_queues, ['que.yml']
 # multiple configs
-:sidekiq_config_files, ['sidekiq.yml', 'sidekiq-2.yml'] #  you can also set it per server
+:que_queues, ['que.yml', 'que-2.yml'] #  you can also set it per server
 ```
 
 ## Example
@@ -42,9 +42,9 @@ A sample application is provided to show how to use this gem at https://github.c
 
 The template used by this project assumes a recent version of Systemd (v240+, e.g. Ubuntu 20.04).
 
-On systems with a less recent version, the `append:` functionality is not supported, and the Sidekiq log messages are sent to the syslog.
+On systems with a less recent version, the `append:` functionality is not supported, and the Que log messages are sent to the syslog.
 
-It's possible to workaround this limitation by configuring the system logger to filter the Sidekiq messages; see [wiki](/../../wiki/Configuring-append-mode-log-files-via-Syslog-NG).
+It's possible to workaround this limitation by configuring the system logger to filter the Que messages; see [wiki](/../../wiki/Configuring-append-mode-log-files-via-Syslog-NG).
 
 ## Contributing
 

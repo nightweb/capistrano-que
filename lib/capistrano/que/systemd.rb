@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Capistrano
-  class Sidekiq::Systemd < Capistrano::Plugin
-    include SidekiqCommon
+  class Que::Systemd < Capistrano::Plugin
+    include QueCommon
     def define_tasks
       eval_rakefile File.expand_path('../tasks/systemd.rake', __dir__)
     end
@@ -11,14 +11,14 @@ module Capistrano
       set_if_empty :service_unit_user, :user
       set_if_empty :systemctl_user, fetch(:service_unit_user, :user) == :user
 
-      set_if_empty :sidekiq_service_unit_name, -> { "#{fetch(:application)}_sidekiq_#{fetch(:stage)}" }
-      set_if_empty :sidekiq_lingering_user, -> { fetch(:lingering_user, fetch(:user)) }
+      set_if_empty :que_service_unit_name, -> { "#{fetch(:application)}_que_#{fetch(:stage)}" }
+      set_if_empty :que_lingering_user, -> { fetch(:lingering_user, fetch(:user)) }
 
-      ## Sidekiq could have a stripped down or more complex version of the environment variables
-      set_if_empty :sidekiq_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }
-      set_if_empty :sidekiq_service_unit_env_vars, -> { fetch(:service_unit_env_vars, []) }
+      ## Que could have a stripped down or more complex version of the environment variables
+      set_if_empty :que_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }
+      set_if_empty :que_service_unit_env_vars, -> { fetch(:service_unit_env_vars, []) }
 
-      set_if_empty :sidekiq_service_templates_path, fetch(:service_templates_path, 'config/deploy/templates')
+      set_if_empty :que_service_templates_path, fetch(:service_templates_path, 'config/deploy/templates')
     end
 
     def systemd_command(*args)
